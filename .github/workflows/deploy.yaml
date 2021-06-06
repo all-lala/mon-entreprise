@@ -151,19 +151,21 @@ jobs:
             - mycompanyinfrance : ${{ needs.deploy-context.outputs.en_url }}
             - publicodes : ${{ needs.deploy-context.outputs.publicodes_url }}
 
-  end-to-end-test:
+  end-to-end-test-preview:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
     runs-on: ubuntu-16.04
     # We need to specify always() https://github.com/actions/runner/issues/491
-    if: always() && (needs.deploy-prod.result == 'success' || needs.deploy-preview.result == 'success')
-    needs: [deploy-context, deploy-prod, deploy-preview]
+    if: always() && needs.deploy-preview.result == 'success'
+    needs: [deploy-context, deploy-preview]
 
     strategy:
       fail-fast: false
       matrix:
         site: ['fr', 'en', 'publicodes']
+        browser: [chrome]
+        viewport: [default]
         include:
           - site: fr
             integrationFolder: mon-entreprise
@@ -178,13 +180,10 @@ jobs:
             integrationFolder: publi.codes
             language: fr
 
-        # TODO : activate parallelization https://github.com/cypress-io/github-action#parallel (missing https://github.com/cypress-io/github-action#custom-build-id)
-        # containers: [1, 2] 
-        # TODO : browser: ['firefox', 'chrome'] 
-
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      
       - uses: actions/cache@v2
         # Custom cache as we do not care about installing all the other dependancies
         with:
@@ -192,15 +191,85 @@ jobs:
             ~/.cache/Cypress
             node_modules
           key: cypress-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      
       - run: node mon-entreprise/scripts/get-cypress-packages.js | xargs npm i
-      - name: Test mon-entreprise
+      
+      - name: Test e2e mon-entreprise on preview (site=${{ matrix.site }}, browser=${{ matrix.browser}}, viewport=${{ matrix.viewport }})
         uses: cypress-io/github-action@v2
         with:
           install: false
           working-directory: mon-entreprise
           record: true
-          tag: ${{ matrix.site }},${{ needs.deploy-context.outputs.env-name }}-deploy
+          tag: ${{ matrix.site }},${{ matrix.browser }},viewport-${{ matrix.viewport }},${{ needs.deploy-context.outputs.env-name }}-deploy
           config: integrationFolder=cypress/integration/${{ matrix.integrationFolder }},baseUrl=${{ matrix.baseUrl }}
           env: language=${{ matrix.language }}
+          browser: ${{ matrix.browser}}
+          headless: true
+          parallel: true
+          ci-build-id: '${{ github.sha }}-${{ github.workflow }}-${{ github.event_name }}'
+        env:
+          COMMIT_INFO_MESSAGE: ${{ github.event.pull_request.title }}
+
+  end-to-end-test-production:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+    runs-on: ubuntu-16.04
+    # We need to specify always() https://github.com/actions/runner/issues/491
+    if: always() && needs.deploy-prod.result == 'success'
+    needs: [deploy-context, deploy-prod]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        site: ['fr', 'en', 'publicodes']
+        browser: [chrome, firefox]
+        viewport: [default, small]
+        include:
+          - site: fr
+            integrationFolder: mon-entreprise
+            baseUrl: ${{ needs.deploy-context.outputs.fr_url }}
+            language: fr
+          - site: en
+            integrationFolder: mon-entreprise
+            baseUrl: ${{ needs.deploy-context.outputs.en_url }}
+            language: en
+          - site: publicodes
+            baseUrl: ${{ needs.deploy-context.outputs.publicodes_url }}
+            integrationFolder: publi.codes
+            language: fr
+        exclude:
+          - site: en
+            browser: firefox
+          - site: en
+            viewport: small
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - uses: actions/cache@v2
+        # Custom cache as we do not care about installing all the other dependancies
+        with:
+          path: |
+            ~/.cache/Cypress
+            node_modules
+          key: cypress-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      
+      - run: node mon-entreprise/scripts/get-cypress-packages.js | xargs npm i
+      
+      - name: Test e2e mon-entreprise on production (site=${{ matrix.site }}, browser=${{ matrix.browser}}, viewport=${{ matrix.viewport }})
+        uses: cypress-io/github-action@v2
+        with:
+          install: false
+          working-directory: mon-entreprise
+          record: true
+          tag: ${{ matrix.site }},${{ matrix.browser }},viewport-${{ matrix.viewport }},${{ needs.deploy-context.outputs.env-name }}-deploy
+          config: integrationFolder=cypress/integration/${{ matrix.integrationFolder }},baseUrl=${{ matrix.baseUrl }}${{ matrix.viewport == 'small' && ',viewportHeight=740,viewportWidth=360'}}
+          env: language=${{ matrix.language }}
+          browser: ${{ matrix.browser}}
+          headless: true
+          parallel: true
+          ci-build-id: '${{ github.sha }}-${{ github.workflow }}-${{ github.event_name }}'
         env:
           COMMIT_INFO_MESSAGE: ${{ github.event.pull_request.title }}
