@@ -171,14 +171,22 @@ jobs:
             integrationFolder: mon-entreprise
             baseUrl: ${{ needs.deploy-context.outputs.fr_url }}
             language: fr
+            container: 1
+          - site: fr
+            integrationFolder: mon-entreprise
+            baseUrl: ${{ needs.deploy-context.outputs.fr_url }}
+            language: fr
+            container: 2
           - site: en
             integrationFolder: mon-entreprise
             baseUrl: ${{ needs.deploy-context.outputs.en_url }}
             language: en
+            container: 1
           - site: publicodes
             baseUrl: ${{ needs.deploy-context.outputs.publicodes_url }}
             integrationFolder: publi.codes
             language: fr
+            container: 1
 
     steps:
       - name: Checkout
@@ -200,13 +208,13 @@ jobs:
           install: false
           working-directory: mon-entreprise
           record: true
-          tag: ${{ matrix.site }},${{ matrix.browser }},viewport-${{ matrix.viewport }},${{ needs.deploy-context.outputs.env-name }}-deploy
+          tag: ${{ matrix.site }},${{ matrix.browser }},viewport_${{ matrix.viewport }},${{ needs.deploy-context.outputs.env-name }}-deploy
           config: integrationFolder=cypress/integration/${{ matrix.integrationFolder }},baseUrl=${{ matrix.baseUrl }}
           env: language=${{ matrix.language }}
           browser: ${{ matrix.browser}}
           headless: true
           parallel: true
-          group: ${{ matrix.browser }}-viewport_${{ matrix.viewport }}
+          group: ${{ matrix.site }}-${{ matrix.browser }}-viewport_${{ matrix.viewport }}
           # ci-build-id: '${{ github.sha }}-${{ github.workflow }}-${{ github.event_name }}'
         env:
           COMMIT_INFO_MESSAGE: ${{ github.event.pull_request.title }}
