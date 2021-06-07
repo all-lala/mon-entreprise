@@ -208,14 +208,14 @@ jobs:
           install: false
           working-directory: mon-entreprise
           record: true
-          tag: ${{ matrix.site }},${{ matrix.browser }},viewport_${{ matrix.viewport }},${{ needs.deploy-context.outputs.env-name }}_deploy
+          # tag: ${{ matrix.site }},${{ matrix.browser }},viewport_${{ matrix.viewport }},${{ needs.deploy-context.outputs.env-name }}_deploy
           config: integrationFolder=cypress/integration/${{ matrix.integrationFolder }},baseUrl=${{ matrix.baseUrl }}
           env: language=${{ matrix.language }}
           browser: ${{ matrix.browser}}
           headless: true
           parallel: true
           group: ${{ matrix.site }}-${{ matrix.browser }}-viewport_${{ matrix.viewport }}-${{ matrix.container }}
-          ci-build-id: '${{ github.sha }}-${{ github.workflow }}-${{ github.event_name }}'
+          # ci-build-id: '${{ github.sha }}-${{ github.workflow }}-${{ github.event_name }}'
         env:
           COMMIT_INFO_MESSAGE: ${{ github.event.pull_request.title }}
 
