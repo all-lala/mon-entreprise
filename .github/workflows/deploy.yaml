@@ -206,6 +206,7 @@ jobs:
           browser: ${{ matrix.browser}}
           headless: true
           parallel: true
+          group: ${{ matrix.site }}
           ci-build-id: '${{ github.sha }}-${{ github.workflow }}-${{ github.event_name }}'
         env:
           COMMIT_INFO_MESSAGE: ${{ github.event.pull_request.title }}
